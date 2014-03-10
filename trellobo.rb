@@ -45,7 +45,7 @@ OAuthPolicy.consumer_credential = OAuthCredential.new ENV['TRELLO_API_KEY'], ENV
 OAuthPolicy.token = OAuthCredential.new ENV['TRELLO_API_ACCESS_TOKEN_KEY'], nil
 
 def given_short_id_return_long_id(short_id)
-  long_ids = $board.cards.collect { |c| c.id if c.url.match(/\/(\d+)$/)[1] == short_id.to_s}
+  long_ids = $board.cards.collect { |c| c.id if c.url.match(/\/(\d+).*$/)[1] == short_id.to_s}
   long_ids.delete_if {|e| e.nil?}
 end
 
