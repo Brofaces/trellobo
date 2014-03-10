@@ -2,7 +2,6 @@ require 'cinch'
 require 'trello'
 require 'json'
 require 'resolv'
-require_relative './mailer.rb'
 
 # You will need an access token to use ruby-trello 0.3.0 or higher, which trellobo depends on. To
 # get it, you'll need to go to this URL:
@@ -27,12 +26,6 @@ require_relative './mailer.rb'
 # TRELLO_BOT_SERVER_USE_SSL : if ssl is required set this variable to "true" if not, do not set it at all. Optional
 # TRELLO_BOT_SERVER_SSL_PORT : if ssl is used set this variable to the port number that should be used. Optional
 # TRELLO_ADD_CARDS_LIST : all cards are added at creation time to a default list. Set this variable to the name of this list, otherwise it will default to To Do. Optional
-# TRELLO_MAIL_ADDRESS : address of the mail server used to send the cards
-# TRELLO_MAIL_PORT : port of the mail server used to send the cards
-# TRELLO_MAIL_AUTHENTICATION : type of authentication of the mail server used to send the cards
-# TRELLO_MAIL_USERNAME : username in the mail server used to send the cards
-# TRELLO_MAIL_PASSWORD : password for the username in the mail server used to send the cards
-# TRELLO_MAIL_ENABLE_STARTTLS_AUTO : set tu true if the mail server uses tls, false otherwise
 
 $board = nil
 $add_cards_list = nil
@@ -53,24 +46,6 @@ def get_list_by_name(name)
   $board.lists.find_all {|l| l.name.casecmp(name.to_s) == 0}
 end
 
-def validate_mail(email)
-  unless email.blank?
-    unless email =~ /^[a-zA-Z][\w\.-]*[a-zA-Z0-9]@[a-zA-Z0-9][\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]$/
-      raise "Your email address does not appear to be valid"
-    else
-      raise "Your email domain name appears to be incorrect" unless validate_email_domain(email)
-    end
-  end
-end
-
-def validate_email_domain(email)
-  domain = email.match(/\@(.+)/)[1]
-  Resolv::DNS.open do |dns|
-    @mx = dns.getresources(domain, Resolv::DNS::Resource::IN::MX)
-  end
-  @mx.size > 0 ? true : false
-end
-
 def sync_board
   return $board.refresh! if $board
   $board = Trello::Board.find(ENV['TRELLO_BOARD_ID'])
@@ -89,7 +64,7 @@ def say_help(msg)
   msg.reply "  -> 6. card <id> move to Doing - moves the card with short id equal to <id> to the list Doing"
   msg.reply "  -> 7. card <id> add member joe - assign joe to the card with short id equal to <id>."
   msg.reply "  -> 8. cards joe - return all cards assigned to joe"
-  msg.reply "  -> 9. card <id> view joe@email.com - sends an email to joe@email.com with the content of the card with short id equal to <id>"
+  msg.reply "  -> 9. card <id> link - return a link to the card with short id equal to <id>"
 end
 
 bot = Cinch::Bot.new do
@@ -221,9 +196,8 @@ bot = Cinch::Bot.new do
         m.reply "  ->  #{inx.to_s}. #{c.name} (id: #{c.short_id}) from list: #{c.list.name}"
         inx += 1
       end
-    when /^card \d+ view (.+)/
-      m.reply "Sending mail with card content ... "
-      regex = searchfor.match(/^card (\d+) view (.+)/)
+    when /^card \d+ link/
+      regex = searchfor.match(/^card (\d+) link/)
       card_id = given_short_id_return_long_id(regex[1].to_s)
       if card_id.count == 0
         m.reply "Couldn't be found any card with id: #{regex[1]}. Aborting"
@@ -232,24 +206,7 @@ bot = Cinch::Bot.new do
       else
         card = Trello::Card.find(card_id[0])
         msg_err = nil
-        begin
-          validate_mail(regex[2])
-        rescue => e
-          msg_err = e.message
-        end
-        if msg_err.nil?
-          begin
-            email = CardMailer.send_card(regex[2], card)
-            email.deliver
-          rescue => e
-            m.reply e.message
-            m.reply "An error ocurred sending the mail. Sorry for the inconvenience."
-            break
-          end
-          m.reply "Mailed the card \"#{card.name}\" to #{regex[2]}"
-        else
-          m.reply msg_err
-        end
+        m.reply card.url
       end
     when /lists/
       $board.lists.each { |l|
