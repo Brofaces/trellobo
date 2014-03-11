@@ -1,0 +1,9 @@
+#!/bin/bash
+
+$PID=`cat $OPENSHIFT_RUBY_LOG_DIR/server.pid`
+kill $PID
+
+cd $OPENSHIFT_REPO_DIR
+
+nohup bundle exec ruby ./trellobo.rb > $OPENSHIFT_RUBY_LOG_DIR/server.log 2>&1 &
+echo $! > $OPENSHIFT_RUBY_LOG_DIR/server.pid
