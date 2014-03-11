@@ -1,5 +1,5 @@
 #!/bin/bash
 
-$PID=`cat $OPENSHIFT_RUBY_LOG_DIR/server.pid`
+PID=`cat $OPENSHIFT_RUBY_LOG_DIR/server.pid`
 kill $PID
 exit 0
