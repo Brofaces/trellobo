@@ -129,9 +129,9 @@ bot = Cinch::Bot.new do
         card.add_comment comment
         m.reply "Added \"#{comment}\" comment to \"#{card.name}\" card"
       end
-    when /^card \d+ move to \w+/
+    when /^card \d+ move to .+/
       m.reply "Moving card ... "
-      regex = searchfor.match(/^card (\d+) move to (\w+)/)
+      regex = searchfor.match(/^card (\d+) move to (.+)/)
       list = get_list_by_name(regex[2].to_s)
       card_id = given_short_id_return_long_id(regex[1].to_s)
       if card_id.count == 0
