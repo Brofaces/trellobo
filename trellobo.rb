@@ -70,7 +70,9 @@ def say_help(msg)
   msg.reply "  ->  7. card <id> add member joe - assign joe to the card with short id equal to <id>."
   msg.reply "  ->  8. cards joe - return all cards assigned to joe"
   msg.reply "  ->  9. card <id> link - return a link to the card with short id equal to <id>"
-  msg.reply "  -> 10. help me joe TASK1337 - creates a new card named: \'help with TASK1337\' with you and joe as members"
+  msg.reply "  -> 10. help me TASK1337 - creates a new card named: \'help with TASK1337\' on the help board"
+  msg.reply "  -> 11. help requests - show unclaimed help requests"
+  msg.reply "  -> 12. help with <id> - add yourself as a member on a help request card with id equal to <id>"
 end
 
 bot = Cinch::Bot.new do
@@ -225,16 +227,24 @@ bot = Cinch::Bot.new do
     when /sync/
       sync_board
       m.reply "Ok, synced the board, #{m.user.nick}."
-    when /help me \w+ .*/
-      if $add_cards_list.nil?
+    when /help me .*/
+      if $add_help_cards_list.nil?
         m.reply "Can't add card. It wasn't found any list named: #{ENV['TRELLO_ADD_CARDS_LIST']}."
       else
         m.reply "Requesting help ... "
-        regex = searchfor.strip.match(/^help me (\w+) (.*)/)
-        helper = Trello::Member.find(regex[1])
-        name = regex[2]
-        card = Trello::Card.create(:name => name, :list_id => $add_help_cards_list.id, :member_ids => helper.id)
+        regex = searchfor.strip.match(/^help me (.*)/)
+        name = regex[1]
+        card = Trello::Card.create(:name => name, :list_id => $add_help_cards_list.id)
         m.reply "Created card #{card.name} with id: #{card.short_id}."
+      end
+    when /help requests/
+      cards = []
+      if $help_board.cards == 0
+        m.reply "No cards on the #{ENV['TRELLO_ADD_HELP_CARDS_LIST']} list."
+      end
+      $help_board.cards.each do |c|
+        m.reply "  ->  #{inx.to_s}. #{c.name} (id: #{c.short_id}) from list: #{c.list.name}"
+        inx += 1
       end
     else
       if searchfor.length > 0
