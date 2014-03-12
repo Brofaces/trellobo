@@ -18,6 +18,7 @@ require 'resolv'
 # TRELLO_API_SECRET : your Trello API developer secret
 # TRELLO_API_ACCESS_TOKEN_KEY : your Trello API access token key. See above how to generate it.
 # TRELLO_BOARD_ID : the trellobot looks at only one board and the lists on it, put its id here
+# TRELLO_HELP_BOARD_ID : the id of the trello board for help requests
 # TRELLO_BOT_QUIT_CODE : passcode to cause trellobot to quit - defaults to none
 # TRELLO_BOT_CHANNEL : the name of the channel you want trellobot to live on
 # TRELLO_BOT_CHANNEL_KEY : the password of the channel you want trellobot to live on. Optional
@@ -26,9 +27,11 @@ require 'resolv'
 # TRELLO_BOT_SERVER_USE_SSL : if ssl is required set this variable to "true" if not, do not set it at all. Optional
 # TRELLO_BOT_SERVER_SSL_PORT : if ssl is used set this variable to the port number that should be used. Optional
 # TRELLO_ADD_CARDS_LIST : all cards are added at creation time to a default list. Set this variable to the name of this list, otherwise it will default to To Do. Optional
+# TRELLO_ADD_HELP_CARDS_LIST : the id of the trello list for help requests
 
 $board = nil
 $add_cards_list = nil
+$add_help_cards_list = nil
 
 include Trello
 include Trello::Authorization
@@ -49,22 +52,25 @@ end
 def sync_board
   return $board.refresh! if $board
   $board = Trello::Board.find(ENV['TRELLO_BOARD_ID'])
+  $help_board = Trello::Board.find(ENV['TRELLO_HELP_BOARD_ID'])
   $add_cards_list = $board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_CARDS_LIST']) == 0 }
+  $add_help_cards_list = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_HELP_CARDS_LIST']) == 0 }
 end
 
 def say_help(msg)
   msg.reply "I can tell you the open cards on the lists on your Trello board. Just address me with the name of the list (it's not case sensitive)."
   msg.reply "For example - trellobot: ideas"
   msg.reply "I also understand the these commands : "
-  msg.reply "  -> 1. help - shows this!"
-  msg.reply "  -> 2. sync - resyncs my cache with the board."
-  msg.reply "  -> 3. lists - show me all the board list names"
-  msg.reply "  -> 4. card add this is a card - creates a new card named: \'this is a card\' in a list defined in the TRELLO_ADD_CARDS_LIST env variable or if it\'s not present in a list named To Do"
-  msg.reply "  -> 5. card <id> comment this is a comment on card <id> - creates a comment on the card with short id equal to <id>"
-  msg.reply "  -> 6. card <id> move to Doing - moves the card with short id equal to <id> to the list Doing"
-  msg.reply "  -> 7. card <id> add member joe - assign joe to the card with short id equal to <id>."
-  msg.reply "  -> 8. cards joe - return all cards assigned to joe"
-  msg.reply "  -> 9. card <id> link - return a link to the card with short id equal to <id>"
+  msg.reply "  ->  1. help - shows this!"
+  msg.reply "  ->  2. sync - resyncs my cache with the board."
+  msg.reply "  ->  3. lists - show me all the board list names"
+  msg.reply "  ->  4. card add this is a card - creates a new card named: \'this is a card\' in a list defined in the TRELLO_ADD_CARDS_LIST env variable or if it\'s not present in a list named To Do"
+  msg.reply "  ->  5. card <id> comment this is a comment on card <id> - creates a comment on the card with short id equal to <id>"
+  msg.reply "  ->  6. card <id> move to Doing - moves the card with short id equal to <id> to the list Doing"
+  msg.reply "  ->  7. card <id> add member joe - assign joe to the card with short id equal to <id>."
+  msg.reply "  ->  8. cards joe - return all cards assigned to joe"
+  msg.reply "  ->  9. card <id> link - return a link to the card with short id equal to <id>"
+  msg.reply "  -> 10. help me joe TASK1337 - creates a new card named: \'help with TASK1337\' with you and joe as members"
 end
 
 bot = Cinch::Bot.new do
@@ -93,9 +99,9 @@ bot = Cinch::Bot.new do
   # trellobot is polite, and will only reply when addressed
   on :message, /^#{ENV['TRELLO_BOT_NAME']}[_]*:/ do |m|
     # if trellobot can't get thru to the board, then send the human to the human url
-    sync_board unless $board
-    unless $board
-      m.reply "I can't seem to get the list of ideas from Trello, sorry. Try here: https://trello.com/board/#{ENV['TRELLO_BOARD_ID']}"
+    sync_board unless $board and $help_board
+    unless $board and $help_board
+      m.reply "I can't seem to get the list of ideas from Trello, sorry. Try here: https://trello.com/board/#{ENV['TRELLO_BOARD_ID']} or here: https://trello.com/board/#{ENV['TRELLO_HELP_BOARD_ID']}"
       bot.halt
     end
 
@@ -212,13 +218,24 @@ bot = Cinch::Bot.new do
       $board.lists.each { |l|
         m.reply "  ->  #{l.name}"
       }
-    when /help/
+    when /^help$/
       say_help(m)
     when /\?/
       say_help(m)
     when /sync/
       sync_board
       m.reply "Ok, synced the board, #{m.user.nick}."
+    when /help me \w+ .*/
+      if $add_cards_list.nil?
+        m.reply "Can't add card. It wasn't found any list named: #{ENV['TRELLO_ADD_CARDS_LIST']}."
+      else
+        m.reply "Requesting help ... "
+        regex = searchfor.strip.match(/^help me (\w+) (.*)/)
+        helper = Trello::Member.find(regex[1])
+        name = regex[2]
+        card = Trello::Card.create(:name => name, :list_id => $add_help_cards_list.id, :member_ids => helper.id)
+        m.reply "Created card #{card.name} with id: #{card.short_id}."
+      end
     else
       if searchfor.length > 0
         # trellobot presumes you know what you are doing and will attempt
