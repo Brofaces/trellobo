@@ -242,6 +242,7 @@ bot = Cinch::Bot.new do
       if $help_board.cards == 0
         m.reply "No cards on the #{ENV['TRELLO_ADD_HELP_CARDS_LIST']} list."
       end
+      inx = 1
       $help_board.cards.each do |c|
         m.reply "  ->  #{inx.to_s}. #{c.name} (id: #{c.short_id}) from list: #{c.list.name}"
         inx += 1
