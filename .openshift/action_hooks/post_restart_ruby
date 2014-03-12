@@ -1,7 +1,9 @@
 #!/bin/bash
 
-$PID=`cat $OPENSHIFT_RUBY_LOG_DIR/server.pid`
-kill $PID
+PID=`cat $OPENSHIFT_RUBY_LOG_DIR/server.pid`
+if [ `ps --pid $PID | wc -l` -gt 1 ]; then
+        kill $PID
+fi
 
 cd $OPENSHIFT_REPO_DIR
 
