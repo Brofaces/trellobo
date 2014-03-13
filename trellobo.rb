@@ -2,6 +2,7 @@ require 'cinch'
 require 'trello'
 require 'json'
 require 'resolv'
+require 'mongo'
 
 # You will need an access token to use ruby-trello 0.3.0 or higher, which trellobo depends on. To
 # get it, you'll need to go to this URL:
@@ -28,13 +29,16 @@ require 'resolv'
 # TRELLO_BOT_SERVER_SSL_PORT : if ssl is used set this variable to the port number that should be used. Optional
 # TRELLO_ADD_CARDS_LIST : all cards are added at creation time to a default list. Set this variable to the name of this list, otherwise it will default to To Do. Optional
 # TRELLO_ADD_HELP_CARDS_LIST : the id of the trello list for help requests
+# TRELLO_HELP_CLAIMED_LIST : the id of the trello list for claimed help requests
 
 $board = nil
 $add_cards_list = nil
 $add_help_cards_list = nil
+$login_collection = 'logins'
 
 include Trello
 include Trello::Authorization
+include Mongo
 
 Trello::Authorization.const_set :AuthPolicy, OAuthPolicy
 OAuthPolicy.consumer_credential = OAuthCredential.new ENV['TRELLO_API_KEY'], ENV['TRELLO_API_SECRET']
@@ -42,6 +46,11 @@ OAuthPolicy.token = OAuthCredential.new ENV['TRELLO_API_ACCESS_TOKEN_KEY'], nil
 
 def given_short_id_return_long_id(short_id)
   long_ids = $board.cards.collect { |c| c.id if c.url.match(/\/(\d+).*$/)[1] == short_id.to_s}
+  long_ids.delete_if {|e| e.nil?}
+end
+
+def given_short_id_return_long_id_help(short_id)
+  long_ids = $help_board.cards.collect { |c| c.id if c.url.match(/\/(\d+).*$/)[1] == short_id.to_s}
   long_ids.delete_if {|e| e.nil?}
 end
 
@@ -55,6 +64,23 @@ def sync_board
   $help_board = Trello::Board.find(ENV['TRELLO_HELP_BOARD_ID'])
   $add_cards_list = $board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_CARDS_LIST']) == 0 }
   $add_help_cards_list = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_HELP_CARDS_LIST']) == 0 }
+  $help_claimed_board = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_HELP_CLAIMED_LIST']) == 0 }
+end
+
+def db_connect
+  db = MongoClient.new('localhost', 27018).db('trellobo')
+  db.authenticate('admin', '8_kTwlUyKipJ')
+  return db
+end
+
+def store_login(nick, login)
+  db = db_connect
+  db[$login_collection].insert({'nick' => nick, 'login' => login})
+end
+
+def get_login(nick)
+  db = db_connect
+  db[$login_collection].find_one({'nick' => nick})['login']
 end
 
 def say_help(msg)
@@ -82,6 +108,7 @@ bot = Cinch::Bot.new do
     ENV['TRELLO_BOT_NAME'] ||= "trellobot"
     ENV['TRELLO_BOT_SERVER'] ||= "irc.freenode.net"
     ENV['TRELLO_ADD_CARDS_LIST'] ||= "To Do"
+    ENV['TRELLO_ADD_HELP_CARDS_LIST']
 
     c.server = ENV['TRELLO_BOT_SERVER']
     c.nick = ENV['TRELLO_BOT_NAME']
@@ -240,13 +267,23 @@ bot = Cinch::Bot.new do
     when /help requests/
       cards = []
       if $help_board.cards == 0
-        m.reply "No cards on the #{ENV['TRELLO_ADD_HELP_CARDS_LIST']} list."
+        m.reply "No cards on the #{$add_help_cards_list} list."
       end
       inx = 1
       $help_board.cards.each do |c|
         m.reply "  ->  #{inx.to_s}. #{c.name} (id: #{c.short_id}) from list: #{c.list.name}"
         inx += 1
       end
+    when /help with .*/
+      regex = /help with (\d+)/.match(m.message)
+      card_id = given_short_id_return_long_id_help(regex[1].to_s)
+      nick = m.user.nick.split('|')[0]
+      user = Trello::Member.find(get_login(nick))
+      card = Trello::Card.find(card_id[0])
+      m.reply "Helping with #{card.name}..."
+      card.add_member(user)
+      card.move_to_list($help_claimed_board)
+      m.reply "Added you to card #{card.name}."
     else
       if searchfor.length > 0
         # trellobot presumes you know what you are doing and will attempt
@@ -283,13 +320,23 @@ bot = Cinch::Bot.new do
   # if trellobot loses his marbles, it's easy to disconnect him from the server
   # note that if you are doing a PaaS deploy, he may respawn depending on what
   # the particular hosting env is (e.g. Heroku will start him up again)
-  on :private, /^quit(\s*)(\w*)/ do |m, blank, code|
-    bot.quit if ENV['TRELLO_BOT_QUIT_CODE'].eql?(code)
+  on :private do |m|
+    case m.message
+    when /^quit\s*\w*/ 
+      code = /^quit\s*(\w*)/.match(m.message)[1]
+      bot.quit if ENV['TRELLO_BOT_QUIT_CODE'].eql?(code)
 
-    if code.empty?
-      m.reply "There is a quit code required for this bot, sorry."
-    else
-      m.reply "That is not the correct quit code required for this bot, sorry."
+      if code.empty?
+        m.reply "There is a quit code required for this bot, sorry."
+      else
+        m.reply "That is not the correct quit code required for this bot, sorry."
+      end
+    when /^register/
+      nick = m.user.nick.split('|')[0]
+      login = /^register (.*)/.match(m.message)[1]
+      m.reply "Registering #{nick} as #{login}"
+      store_login(nick, login)
+      m.reply "Done!"
     end
   end
 end
