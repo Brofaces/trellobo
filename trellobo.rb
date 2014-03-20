@@ -125,8 +125,10 @@ bot = Cinch::Bot.new do
     sync_board
   end
 
+  intro = /^#{ENV['TRELLO_BOT_NAME']}_*[:,] (.*)/
+
   # trellobot is polite, and will only reply when addressed
-  on :message, /^#{ENV['TRELLO_BOT_NAME']}[_]*:/ do |m|
+  on :message, intro do |m|
     # if trellobot can't get thru to the board, then send the human to the human url
     sync_board unless $board and $help_board
     unless $board and $help_board
@@ -135,8 +137,8 @@ bot = Cinch::Bot.new do
     end
 
     # trellobot: what up?  <- The bit we are interested in is past the ':'
-    parts = m.message.split(':',2)
-    searchfor = parts[1].strip.downcase
+    searchfor = intro.match(m.message)[1]
+    searchfor = searchfor.strip.downcase
 
     case searchfor
     when /debug/
