@@ -219,19 +219,20 @@ bot = Cinch::Bot.new do
     when /^cards \w+/
       username = searchfor.match(/^cards (\w+)/)[1]
       cards = []
+      cid_length = 1
       $board.cards.each do |card|
         members = card.members.collect { |mem| mem.username }
         if members.include? username
           cards << card
+          cid_length = card.short_id.to_s.length if card.short_id.to_s.length > cid_length
         end
       end
-      inx = 1
       if cards.count == 0
         m.reply "User \"#{username}\" has no cards assigned."
       end
+      cards.sort! { |c1, c2| c1.short_id.to_i <=> c2.short_id.to_i }
       cards.each do |c|
-        m.reply "  ->  #{inx.to_s}. #{c.name} (id: #{c.short_id}) from list: #{c.list.name}"
-        inx += 1
+        m.reply "  ->  #{c.short_id.to_s.rjust(cid_length)}. #{c.name} from list: #{c.list.name}"
       end
     when /^card \d+ link/
       regex = searchfor.match(/^card (\d+) link/)
@@ -268,13 +269,15 @@ bot = Cinch::Bot.new do
       end
     when /help requests/
       cards = []
-      if $help_board.cards == 0
+      if $add_help_cards_list.cards == 0
         m.reply "No cards on the #{$add_help_cards_list} list."
       end
-      inx = 1
-      $help_board.cards.each do |c|
-        m.reply "  ->  #{inx.to_s}. #{c.name} (id: #{c.short_id}) from list: #{c.list.name}"
-        inx += 1
+      cid_length = 1
+      $add_help_cards_list.cards.each do |c|
+          cid_length = card.short_id.to_s.length if card.short_id.to_s.length > cid_length
+      end
+      $add_help_cards_list.cards.each do |c|
+        m.reply "  ->  #{c.short_id.to_s.rjust(cid_length)}. #{c.name} from list: #{c.list.name}"
       end
     when /help with .*/
       regex = /help with (\d+)/.match(m.message)
