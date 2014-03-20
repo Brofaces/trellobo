@@ -75,7 +75,8 @@ end
 
 def get_login(nick)
   db = db_connect
-  db[$login_collection].find_one({'nick' => nick})['login']
+  doc = db[$login_collection].find_one({'nick' => nick})
+  doc['login'] if doc
 end
 
 def say_help(msg)
@@ -157,6 +158,8 @@ bot = Cinch::Bot.new do
         m.reply "There are #{list.count} cards with id: #{regex[1]}. Don't know what to do. Aborting"
       else
         comment = card_regex[2]
+        username = get_login(m.user.nick) ? "@#{get_login(m.user.nick)}" : m.user.nick
+        comment += " -- #{username}"
         card = Trello::Card.find(card_id[0].to_s)
         card.add_comment comment
         m.reply "Added \"#{comment}\" comment to \"#{card.name}\" card"
