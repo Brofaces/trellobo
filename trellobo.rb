@@ -284,6 +284,7 @@ bot = Cinch::Bot.new do
       card_id = given_short_id_return_long_id_help(regex[1].to_s)
       nick = m.user.nick.split('|')[0]
       user = Trello::Member.find(get_login(nick))
+      m.reply "You must register your Trello username first! (eg: /msg #{ENV['TRELLO_BOT_NAME']} register <trello_username>)" unless user
       card = Trello::Card.find(card_id[0])
       m.reply "Helping with #{card.name}..."
       card.add_member(user)
