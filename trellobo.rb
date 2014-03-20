@@ -69,7 +69,7 @@ end
 
 def db_connect
   db = MongoClient.new('localhost', 27018).db('trellobo')
-  db.authenticate('admin', '8_kTwlUyKipJ')
+  db.authenticate(ENV['OPENSHIFT_MONGODB_DB_USERNAME'], ENV['OPENSHIFT_MONGODB_DB_PASSWORD'])
   return db
 end
 
