@@ -44,13 +44,8 @@ Trello::Authorization.const_set :AuthPolicy, OAuthPolicy
 OAuthPolicy.consumer_credential = OAuthCredential.new ENV['TRELLO_API_KEY'], ENV['TRELLO_API_SECRET']
 OAuthPolicy.token = OAuthCredential.new ENV['TRELLO_API_ACCESS_TOKEN_KEY'], nil
 
-def given_short_id_return_long_id(short_id)
-  long_ids = $board.cards.collect { |c| c.id if c.url.match(/\/(\d+).*$/)[1] == short_id.to_s}
-  long_ids.delete_if {|e| e.nil?}
-end
-
-def given_short_id_return_long_id_help(short_id)
-  long_ids = $help_board.cards.collect { |c| c.id if c.url.match(/\/(\d+).*$/)[1] == short_id.to_s}
+def given_short_id_return_long_id(board, short_id)
+  long_ids = board.cards.collect { |c| c.id if c.url.match(/\/(\d+).*$/)[1] == short_id.to_s}
   long_ids.delete_if {|e| e.nil?}
 end
 
@@ -155,7 +150,7 @@ bot = Cinch::Bot.new do
     when /^card \d+ comment/
       m.reply "Commenting on card ... "
       card_regex = searchfor.match(/^card (\d+) comment (.+)/)
-      card_id = given_short_id_return_long_id(card_regex[1])
+      card_id = given_short_id_return_long_id($board, card_regex[1])
       if card_id.count == 0
         m.reply "Couldn't be found any card with id: #{card_regex[1]}. Aborting"
       elsif card_id.count > 1
@@ -170,7 +165,7 @@ bot = Cinch::Bot.new do
       m.reply "Moving card ... "
       regex = searchfor.match(/^card (\d+) move to (.+)/)
       list = get_list_by_name(regex[2].to_s)
-      card_id = given_short_id_return_long_id(regex[1].to_s)
+      card_id = given_short_id_return_long_id($board, regex[1].to_s)
       if card_id.count == 0
         m.reply "Couldn't be found any card with id: #{regex[1]}. Aborting"
       elsif card_id.count > 1
@@ -194,7 +189,7 @@ bot = Cinch::Bot.new do
     when /^card \d+ add member \w+/
       m.reply "Adding member to card ... "
       regex = searchfor.match(/^card (\d+) add member (\w+)/)
-      card_id = given_short_id_return_long_id(regex[1].to_s)
+      card_id = given_short_id_return_long_id($board, regex[1].to_s)
       if card_id.count == 0
         m.reply "Couldn't be found any card with id: #{regex[1]}. Aborting"
       elsif card_id.count > 1
@@ -236,7 +231,7 @@ bot = Cinch::Bot.new do
       end
     when /^card \d+ link/
       regex = searchfor.match(/^card (\d+) link/)
-      card_id = given_short_id_return_long_id(regex[1].to_s)
+      card_id = given_short_id_return_long_id($board, regex[1].to_s)
       if card_id.count == 0
         m.reply "Couldn't be found any card with id: #{regex[1]}. Aborting"
       elsif card_id.count > 1
@@ -269,8 +264,8 @@ bot = Cinch::Bot.new do
       end
     when /help requests/
       cards = []
-      if $add_help_cards_list.cards == 0
-        m.reply "No cards on the #{$add_help_cards_list} list."
+      if $add_help_cards_list.cards.length == 0
+        m.reply "No cards on the #{$add_help_cards_list.name} list."
       end
       cid_length = 1
       $add_help_cards_list.cards.each do |c|
@@ -281,7 +276,7 @@ bot = Cinch::Bot.new do
       end
     when /help with .*/
       regex = /help with (\d+)/.match(m.message)
-      card_id = given_short_id_return_long_id_help(regex[1].to_s)
+      card_id = given_short_id_return_long_id($help_board, regex[1].to_s)
       nick = m.user.nick.split('|')[0]
       user = Trello::Member.find(get_login(nick))
       m.reply "You must register your Trello username first! (eg: /msg #{ENV['TRELLO_BOT_NAME']} register <trello_username>)" unless user
