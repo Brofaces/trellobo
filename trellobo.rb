@@ -63,7 +63,7 @@ def sync_board
 end
 
 def db_connect
-  db = MongoClient.new('localhost', 27018).db('trellobo')
+  db = MongoClient.new(ENV['OPENSHIFT_MONGODB_DB_HOST'], ENV['OPENSHIFT_MONGODB_DB_PORT']).db(ENV['OPENSHIFT_APP_NAME'])
   db.authenticate(ENV['OPENSHIFT_MONGODB_DB_USERNAME'], ENV['OPENSHIFT_MONGODB_DB_PASSWORD'])
   return db
 end
