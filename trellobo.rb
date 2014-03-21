@@ -62,6 +62,19 @@ def sync_board
   $help_claimed_board = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_HELP_CLAIMED_LIST']) == 0 }
 end
 
+def nick_parse(nick)
+  match = /([a-zA-Z\d]+)/.match(nick)
+  shortnick = ''
+
+  if match
+    shortnick = match[1]
+  else
+    shortnick = nick
+  end
+
+  return shortnick
+end
+
 def db_connect
   db = MongoClient.new(ENV['OPENSHIFT_MONGODB_DB_HOST'], ENV['OPENSHIFT_MONGODB_DB_PORT']).db(ENV['OPENSHIFT_APP_NAME'])
   db.authenticate(ENV['OPENSHIFT_MONGODB_DB_USERNAME'], ENV['OPENSHIFT_MONGODB_DB_PASSWORD'])
@@ -75,7 +88,7 @@ end
 
 def get_login(nick)
   db = db_connect
-  doc = db[$login_collection].find_one({'nick' => nick})
+  doc = db[$login_collection].find_one({'nick' => nick_parse(nick)})
   doc['login'] if doc
 end
 
