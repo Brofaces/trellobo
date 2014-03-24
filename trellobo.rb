@@ -2,7 +2,7 @@ require 'cinch'
 require 'trello'
 require 'json'
 require 'resolv'
-require 'mongo'
+require_relative './utils'
 
 # You will need an access token to use ruby-trello 0.3.0 or higher, which trellobo depends on. To
 # get it, you'll need to go to this URL:
@@ -34,7 +34,6 @@ require 'mongo'
 $board = nil
 $add_cards_list = nil
 $add_help_cards_list = nil
-$login_collection = 'logins'
 
 include Trello
 include Trello::Authorization
@@ -60,36 +59,6 @@ def sync_board
   $add_cards_list = $board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_CARDS_LIST']) == 0 }
   $add_help_cards_list = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_HELP_CARDS_LIST']) == 0 }
   $help_claimed_board = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_HELP_CLAIMED_LIST']) == 0 }
-end
-
-def nick_parse(nick)
-  match = /([a-zA-Z\d]+)/.match(nick)
-  shortnick = ''
-
-  if match
-    shortnick = match[1]
-  else
-    shortnick = nick
-  end
-
-  return shortnick
-end
-
-def db_connect
-  db = MongoClient.new(ENV['OPENSHIFT_MONGODB_DB_HOST'], ENV['OPENSHIFT_MONGODB_DB_PORT']).db(ENV['OPENSHIFT_APP_NAME'])
-  db.authenticate(ENV['OPENSHIFT_MONGODB_DB_USERNAME'], ENV['OPENSHIFT_MONGODB_DB_PASSWORD'])
-  return db
-end
-
-def store_login(nick, login)
-  db = db_connect
-  db[$login_collection].insert({'nick' => nick, 'login' => login})
-end
-
-def get_login(nick)
-  db = db_connect
-  doc = db[$login_collection].find_one({'nick' => nick_parse(nick)})
-  doc['login'] if doc
 end
 
 def say_help(msg)
