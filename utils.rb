@@ -23,8 +23,9 @@ def db_connect
   con = MongoClient.new(ENV['OPENSHIFT_MONGODB_DB_HOST'], ENV['OPENSHIFT_MONGODB_DB_PORT'])
   db = con.db(ENV['OPENSHIFT_APP_NAME'])
   db.authenticate(ENV['OPENSHIFT_MONGODB_DB_USERNAME'], ENV['OPENSHIFT_MONGODB_DB_PASSWORD'])
-  yield db
+  result = yield db
   con.close
+  result
 end
 
 # store a nick/login pair in the db
