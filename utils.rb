@@ -18,7 +18,22 @@ def nick_parse(nick)
   return shortnick
 end
 
-# return an authenticated connection to the openshift mongo db
+# given a registered login, find a user's current nick
+def nick_find(login)
+  shortnick = db_connect do |db|
+    doc = db[$login_collection].find_one({'login' => login})
+    doc['_id'] if doc
+  end
+
+  nick = Channel(ENV['TRELLO_BOT_CHANNEL']).users.collect do |user, mode|
+    shortnick if shortnick == nick_parse(user.nick)
+  end
+  nick.delete_if { |n| n.nil? }
+
+  nick[0]
+end
+
+# provide an authenticated connection to the openshift mongo db
 def db_connect
   con = MongoClient.new(ENV['OPENSHIFT_MONGODB_DB_HOST'], ENV['OPENSHIFT_MONGODB_DB_PORT'])
   db = con.db(ENV['OPENSHIFT_APP_NAME'])
