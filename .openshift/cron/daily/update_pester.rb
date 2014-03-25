@@ -20,9 +20,7 @@ board = Trello::Board.find(ENV['TRELLO_BOARD_ID'])
 watched_lists = ENV.keys.collect { |k| Trello::List.find(ENV[k]) if k =~ /TRELLO_LONELY_LIST_.*/ }.delete_if{ |k| k.nil? }
 
 # get a list of all cards that need to be updated
-MongoClient.new(ENV['OPENSHIFT_MONGODB_DB_HOST'], ENV['OPENSHIFT_MONGODB_DB_PORT']).db(ENV['OPENSHIFT_APP_NAME']) do |db|
-  db.authenticate(ENV['OPENSHIFT_MONGODB_DB_USERNAME'], ENV['OPENSHIFT_MONGODB_DB_PASSWORD'])
-
+db_connect do |db|
   board.members.each do |member|
     lonely_cards = member.cards.each.collect do |card|
       if watched_lists.include?(card.list) and not card.closed and card.last_activity_date > BACK_FIVE
