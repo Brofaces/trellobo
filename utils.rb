@@ -61,6 +61,15 @@ def get_login(nick)
   end
 end
 
-# check the db to see if the listed members have lonely cards that need updating
-def pester(members)
+# check the db to see if members have lonely cards that need updating
+def pester_cards
+  users_cards = {}
+  db_connect do |db|
+    result = db[$login_collection].find({}, {:fields => {'_id' => 1, 'lonely_cards' => 1}})
+    result.each do |r|
+      users_cards[r['_id']] = r['lonely_cards']
+    end
+  end
+
+  users_cards
 end
