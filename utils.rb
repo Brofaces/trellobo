@@ -26,7 +26,7 @@ def nick_find(login)
   end
 
   nick = Channel(ENV['TRELLO_BOT_CHANNEL']).users.collect do |user, mode|
-    shortnick if shortnick == nick_parse(user.nick)
+    user.nick if shortnick == nick_parse(user.nick)
   end
   nick.delete_if { |n| n.nil? }
 
