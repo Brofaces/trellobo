@@ -60,7 +60,3 @@ def get_login(nick)
     doc[$login_collection] if doc
   end
 end
-
-# check the db to see if the listed members have lonely cards that need updating
-def pester(members)
-end
