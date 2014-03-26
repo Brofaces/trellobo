@@ -1,6 +1,8 @@
 require 'mongo'
 require 'trello'
 
+include Mongo
+
 $login_collection = 'users'
 
 # parse an irc nick into its base format
@@ -34,13 +36,17 @@ def nick_find(login)
 end
 
 # provide an authenticated connection to the openshift mongo db
-def db_connect
+def db_connect(&block)
   con = MongoClient.new(ENV['OPENSHIFT_MONGODB_DB_HOST'], ENV['OPENSHIFT_MONGODB_DB_PORT'])
   db = con.db(ENV['OPENSHIFT_APP_NAME'])
   db.authenticate(ENV['OPENSHIFT_MONGODB_DB_USERNAME'], ENV['OPENSHIFT_MONGODB_DB_PASSWORD'])
-  result = yield db
-  con.close
-  result
+  if block
+    result = yield db
+    con.close
+    result
+  else
+    db
+  end
 end
 
 # store a nick/login pair in the db
