@@ -20,6 +20,15 @@ def nick_parse(nick)
   return shortnick
 end
 
+# return a list of registered nicks
+def registered_nicks
+  nicks = db_connect do |db|
+    db[$login_collection].find({}, {fields: {'_id' => true}}).to_a
+  end
+
+  nicks.collect { |n| n['_id'] }
+end
+
 # given a registered login, find a user's current nick
 def nick_find(login)
   shortnick = db_connect do |db|
@@ -61,19 +70,14 @@ end
 def get_login(nick)
   db_connect do |db|
     doc = db[$login_collection].find_one({'_id' => nick_parse(nick)})
-    doc[$login_collection] if doc
+    doc['login'] if doc
   end
 end
 
-# check the db to see if members have lonely cards that need updating
-def pester_cards
-  users_cards = {}
+# given a nick, grab the lonely cards from the db
+def lonely_cards(nick)
   db_connect do |db|
-    result = db[$login_collection].find({}, {:fields => {'_id' => 1, 'lonely_cards' => 1}})
-    result.each do |r|
-      users_cards[r['_id']] = r['lonely_cards']
-    end
+    doc = db[$login_collection].find_one({'_id' => nick_parse(nick)})
+    doc['lonely_cards'] if doc
   end
-
-  users_cards
 end

@@ -3,6 +3,7 @@ require 'trello'
 require 'json'
 require 'resolv'
 require_relative './utils'
+require_relative './pester.rb'
 
 # You will need an access token to use ruby-trello 0.3.0 or higher, which trellobo depends on. To
 # get it, you'll need to go to this URL:
@@ -100,6 +101,7 @@ bot = Cinch::Bot.new do
       c.port = ENV['TRELLO_BOT_SERVER_SSL_PORT'] ||= "6697"
       c.ssl.use = true
     end
+    c.plugins.plugins = [Pester]
     sync_board
   end
 

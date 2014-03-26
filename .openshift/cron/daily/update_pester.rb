@@ -43,6 +43,7 @@ db_connect do |db|
     doc = db[$login_collection].find_one({'login' => member.username})
 
     unless doc.nil?
+      doc['pestered_today'] = false
       doc['lonely_cards'] = cards_ids_urls
       db[$login_collection].update({'_id' => doc['_id']}, doc)
     end
