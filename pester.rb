@@ -12,9 +12,9 @@ class Pester
   def pester_users(m)
     shortnick = nick_parse(m.user.nick)
 
-    pestered_today = db_connect do |db|
-      db[$login_collection].find_one({'_id' => shortnick})['pestered_today']
-    end
+    return unless get_login(shortnick)
+
+    pestered_today = db_connect { |db| db[$login_collection].find_one({'_id' => shortnick})['pestered_today'] }
 
     return if pestered_today
 
