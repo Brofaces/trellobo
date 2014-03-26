@@ -47,14 +47,12 @@ end
 def store_login(nick, login)
   db_connect do |db|
     # TODO: check to see if login is already stored. if so, update instead of insert
-    # TODO: close db connection after this is done!
     db[$login_collection].insert({'_id' => nick, 'login' => login})
   end
 end
 
 # given a nick, grab the stored trello login from the db
 def get_login(nick)
-  # TODO: close db connection after this is done!
   db_connect do |db|
     doc = db[$login_collection].find_one({'_id' => nick_parse(nick)})
     doc[$login_collection] if doc
