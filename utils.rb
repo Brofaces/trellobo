@@ -61,8 +61,7 @@ end
 # store a nick/login pair in the db
 def store_login(nick, login)
   db_connect do |db|
-    # TODO: check to see if login is already stored. if so, update instead of insert
-    db[$login_collection].insert({'_id' => nick, 'login' => login})
+    db[$login_collection].update({'_id' => nick}, {'_id' => nick, 'login' => login, 'lonely_cards' => [], 'pestered_today' => false}, {:upsert => true})
   end
 end
 
