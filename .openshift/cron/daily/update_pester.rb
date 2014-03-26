@@ -23,7 +23,7 @@ watched_lists = ENV.keys.collect { |k| Trello::List.find(ENV[k]) if k =~ /TRELLO
 db_connect do |db|
   board.members.each do |member|
     lonely_cards = member.cards.each.collect do |card|
-      if watched_lists.include?(card.list) and not card.closed and card.last_activity_date > BACK_FIVE
+      if watched_lists.include?(card.list) and not card.closed and card.last_activity_date < BACK_FIVE
         recent_comment = false
 
         comments = card.actions({:filter => :commentCard})
