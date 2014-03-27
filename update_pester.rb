@@ -4,7 +4,7 @@
 
 require 'trello'
 require 'mongo'
-require_relative '../../../utils'
+require_relative './utils'
 
 include Trello
 include Trello::Authorization
