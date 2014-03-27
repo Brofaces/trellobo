@@ -105,10 +105,7 @@ bot = Cinch::Bot.new do
     sync_board
   end
 
-  intro = /^#{ENV['TRELLO_BOT_NAME']}_*[:,] (.*)/
-
-  # trellobot is polite, and will only reply when addressed
-  on :message, intro do |m|
+  on :private do |m|
     # if trellobot can't get thru to the board, then send the human to the human url
     sync_board unless $board and $help_board
     unless $board and $help_board
@@ -116,11 +113,7 @@ bot = Cinch::Bot.new do
       bot.halt
     end
 
-    # trellobot: what up?  <- The bit we are interested in is past the ':'
-    searchfor = intro.match(m.message)[1]
-    searchfor = searchfor.strip.downcase
-
-    case searchfor
+    case m.message
     when /debug/
       debugger
     when /^card add/
@@ -272,6 +265,21 @@ bot = Cinch::Bot.new do
       card.add_member(user)
       card.move_to_list($help_claimed_board)
       m.reply "Added you to card #{card.name}."
+    when /^quit\s*\w*/
+      code = /^quit\s*(\w*)/.match(m.message)[1]
+      bot.quit if ENV['TRELLO_BOT_QUIT_CODE'].eql?(code)
+
+      if code.empty?
+        m.reply "There is a quit code required for this bot, sorry."
+      else
+        m.reply "That is not the correct quit code required for this bot, sorry."
+      end
+    when /^register/
+      nick = m.user.nick.split('|')[0]
+      login = /^register (.*)/.match(m.message)[1]
+      m.reply "Registering #{nick} as #{login}"
+      store_login(nick, login)
+      m.reply "Done!"
     else
       if searchfor.length > 0
         # trellobot presumes you know what you are doing and will attempt
@@ -302,29 +310,6 @@ bot = Cinch::Bot.new do
       else
         say_help(m)
       end
-    end
-  end
-
-  # if trellobot loses his marbles, it's easy to disconnect him from the server
-  # note that if you are doing a PaaS deploy, he may respawn depending on what
-  # the particular hosting env is (e.g. Heroku will start him up again)
-  on :private do |m|
-    case m.message
-    when /^quit\s*\w*/ 
-      code = /^quit\s*(\w*)/.match(m.message)[1]
-      bot.quit if ENV['TRELLO_BOT_QUIT_CODE'].eql?(code)
-
-      if code.empty?
-        m.reply "There is a quit code required for this bot, sorry."
-      else
-        m.reply "That is not the correct quit code required for this bot, sorry."
-      end
-    when /^register/
-      nick = m.user.nick.split('|')[0]
-      login = /^register (.*)/.match(m.message)[1]
-      m.reply "Registering #{nick} as #{login}"
-      store_login(nick, login)
-      m.reply "Done!"
     end
   end
 end
