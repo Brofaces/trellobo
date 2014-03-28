@@ -161,13 +161,15 @@ bot = Cinch::Bot.new do
         elsif list.count > 1
           m.reply "There are #{list.count} lists named: #{regex[2].to_s}. Don't know what to do. Aborting"
         else
-          card = Trello::Card.find(card_id[0])
           list = list[0]
-          if card.list.name.casecmp(list.name) == 0
-            m.reply "Card \"#{card.name}\" is already on list \"#{list.name}\"."
-          else
-            card.move_to_list list
-            m.reply "Moved card \"#{card.name}\" to list \"#{list.name}\"."
+          trello_connect(m.user.nick) do |trello|
+            card = trello.find(:cards, card_id[0].to_s)
+            if card.list.name.casecmp(list.name) == 0
+              m.reply "Card \"#{card.name}\" is already on list \"#{list.name}\"."
+            else
+              card.move_to_list list
+              m.reply "Moved card \"#{card.name}\" to list \"#{list.name}\"."
+            end
           end
         end
       end
