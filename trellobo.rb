@@ -182,20 +182,22 @@ bot = Cinch::Bot.new do
       elsif card_id.count > 1
         m.reply "There are #{list.count} cards with id: #{regex[1]}. Don't know what to do. Aborting"
       else
-        card = Trello::Card.find(card_id[0])
-        membs = card.members.collect {|m| m.username}
-        begin
-          member = Trello::Member.find(regex[2])
-        rescue
-          member = nil
-        end
-        if member.nil?
-          m.reply "User \"#{regex[2]}\" doesn't exist in Trello."
-        elsif membs.include? regex[2]
-          m.reply "#{member.full_name} is already assigned to card \"#{card.name}\"."
-        else
-          card.add_member(member)
-          m.reply "Added \"#{member.full_name}\" to card \"#{card.name}\"."
+        trello_connect(m.user.nick) do |trello|
+          card = trello.find(:cards, card_id[0])
+          membs = card.members.collect {|m| m.username}
+          begin
+            member = trello.find(:members, regex[2])
+          rescue
+            member = nil
+          end
+          if member.nil?
+            m.reply "User \"#{regex[2]}\" doesn't exist in Trello."
+          elsif membs.include? regex[2]
+            m.reply "#{member.full_name} is already assigned to card \"#{card.name}\"."
+          else
+            card.add_member(member)
+            m.reply "Added \"#{member.full_name}\" to card \"#{card.name}\"."
+          end
         end
       end
     when /^cards \w+/
