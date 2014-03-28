@@ -78,6 +78,8 @@ def say_help(msg)
   msg.reply "  -> 10. help me TASK1337 - creates a new card named: \'help with TASK1337\' on the help board"
   msg.reply "  -> 11. help requests - show unclaimed help requests"
   msg.reply "  -> 12. help with <id> - add yourself as a member on a help request card with id equal to <id>"
+  msg.reply "  -> 13. register - create an OAuth key and secret for use with #{ENV['TRELLO_BOT_NAME']}"
+  msg.reply "  -> 14. confirm <login> <token> - finish registering with #{ENV['TRELLO_BOT_NAME']}"
 end
 
 bot = Cinch::Bot.new do
@@ -275,13 +277,20 @@ bot = Cinch::Bot.new do
         m.reply "That is not the correct quit code required for this bot, sorry."
       end
     when /^register/
-      nick = m.user.nick.split('|')[0]
-      login = /^register (.*)/.match(m.message)[1]
-      m.reply "Registering #{nick} as #{login}"
-      store_login(nick, login)
-      m.reply "Done!"
+      m.reply "Go to https://trello.com/1/authorize?key=#{ENV['TRELLO_API_KEY']}&name=#{ENV['OPENSHIFT_APP_NAME']}&response_type=token&scope=read,write&expiration=never"
+      m.reply "then /msg #{ENV['TRELLO_BOT_NAME']} confirm <trello username> <token>"
+    when /^confirm/
+      nick = nick_parse(m.user.nick)
+      match = /^confirm (.*) (.*)/.match(m.message)
+      if match
+        m.reply "Registering #{nick} as #{match[1]}"
+        register(nick, match[1], match[2])
+        m.reply "Done!"
+      else
+        m.reply "That didn't make any sense..."
+      end
     else
-      if m.message.length > 0
+      if m.user and m.message.length > 0
         # trellobot presumes you know what you are doing and will attempt
         # to retrieve cards using the text you put in the message to him
         # at least the comparison is not case sensitive

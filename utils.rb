@@ -23,7 +23,7 @@ end
 # return a list of registered nicks
 def registered_nicks
   nicks = db_connect do |db|
-    db[$login_collection].find({}, {fields: {'_id' => true}}).to_a
+    db[$login_collection].find({}, {fields: ['_id']}).to_a
   end
 
   nicks.collect { |n| n['_id'] }
@@ -32,7 +32,7 @@ end
 # given a registered login, find a user's current nick
 def nick_find(login)
   shortnick = db_connect do |db|
-    doc = db[$login_collection].find_one({'login' => login})
+    doc = db[$login_collection].find_one({login: login})
     doc['_id'] if doc
   end
 
@@ -59,16 +59,16 @@ def db_connect(&block)
 end
 
 # store a nick/login pair in the db
-def store_login(nick, login)
+def register(nick, login, token)
   db_connect do |db|
-    db[$login_collection].update({'_id' => nick}, {'_id' => nick, 'login' => login, 'lonely_cards' => [], 'pestered_today' => false}, {:upsert => true})
+    db[$login_collection].update({'_id' => nick}, {'_id' => nick, 'login' => login, 'token' => token, 'lonely_cards' => [], 'pestered_today' => false}, {:upsert => true})
   end
 end
 
 # given a nick, grab the stored trello login from the db
 def get_login(nick)
   db_connect do |db|
-    doc = db[$login_collection].find_one({'_id' => nick_parse(nick)})
+    doc = db[$login_collection].find_one({_id: nick_parse(nick)})
     doc['login'] if doc
   end
 end
@@ -76,7 +76,7 @@ end
 # given a nick, grab the lonely cards from the db
 def lonely_cards(nick)
   db_connect do |db|
-    doc = db[$login_collection].find_one({'_id' => nick_parse(nick)})
+    doc = db[$login_collection].find_one({_id: nick_parse(nick)})
     doc['lonely_cards'] if doc
   end
 end
