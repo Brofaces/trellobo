@@ -119,6 +119,10 @@ bot = Cinch::Bot.new do
     when /debug/
       debugger
     when /^card add/
+      unless registered_nicks.include?(nick_parse(m.user.nick))
+        m.reply "please register first!"
+        next
+      end
       if $add_cards_list.nil?
         m.reply "Can't add card. It wasn't found any list named: #{ENV['TRELLO_ADD_CARDS_LIST']}."
       else
@@ -130,6 +134,10 @@ bot = Cinch::Bot.new do
         m.reply "Created card #{card.name} with id: #{card.short_id}."
       end
     when /^card \d+ comment/
+      unless registered_nicks.include?(nick_parse(m.user.nick))
+        m.reply "please register first!"
+        next
+      end
       m.reply "Commenting on card ... "
       card_regex = m.message.match(/^card (\d+) comment (.+)/)
       card_id = given_short_id_return_long_id($board, card_regex[1])
@@ -147,6 +155,10 @@ bot = Cinch::Bot.new do
         m.reply "Added \"#{comment}\" comment to \"#{card.name}\" card"
       end
     when /^card \d+ move to .+/
+      unless registered_nicks.include?(nick_parse(m.user.nick))
+        m.reply "please register first!"
+        next
+      end
       m.reply "Moving card ... "
       regex = m.message.match(/^card (\d+) move to (.+)/)
       list = get_list_by_name(regex[2].to_s)
@@ -174,6 +186,10 @@ bot = Cinch::Bot.new do
         end
       end
     when /^card \d+ add member \w+/
+      unless registered_nicks.include?(nick_parse(m.user.nick))
+        m.reply "please register first!"
+        next
+      end
       m.reply "Adding member to card ... "
       regex = m.message.match(/^card (\d+) add member (\w+)/)
       card_id = given_short_id_return_long_id($board, regex[1].to_s)
@@ -243,6 +259,10 @@ bot = Cinch::Bot.new do
       sync_board
       m.reply "Ok, synced the board, #{m.user.nick}."
     when /help me .*/
+      unless registered_nicks.include?(nick_parse(m.user.nick))
+        m.reply "please register first!"
+        next
+      end
       if $add_help_cards_list.nil?
         m.reply "Can't add card. It wasn't found any list named: #{ENV['TRELLO_ADD_CARDS_LIST']}."
       else
@@ -269,6 +289,10 @@ bot = Cinch::Bot.new do
         m.reply "  ->  #{c.short_id.to_s.rjust(cid_length)}. #{c.name} from list: #{c.list.name}"
       end
     when /help with .*/
+      unless registered_nicks.include?(nick_parse(m.user.nick))
+        m.reply "please register first!"
+        next
+      end
       regex = /help with (\d+)/.match(m.message)
       card_id = given_short_id_return_long_id($help_board, regex[1].to_s)
       nick = m.user.nick.split('|')[0]
