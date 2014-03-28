@@ -249,7 +249,11 @@ bot = Cinch::Bot.new do
         m.reply "Requesting help ... "
         regex = m.message.strip.match(/^help me (.*)/)
         name = regex[1]
-        card = Trello::Card.create(:name => name, :list_id => $add_help_cards_list.id)
+        card = trello_connect(m.user.nick) do |trello|
+          card = trello.create(:card, {'name' => name, 'idList' => $add_help_cards_list.id})
+          card.add_member(trello.find(:members, get_login(nick_parse(m.user.nick))))
+          card
+        end
         m.reply "Created card #{card.name} with id: #{card.short_id}."
       end
     when /help requests/
