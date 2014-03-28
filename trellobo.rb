@@ -124,7 +124,9 @@ bot = Cinch::Bot.new do
       else
         m.reply "Creating card ... "
         name = m.message.strip.match(/^card add (.+)$/)[1]
-        card = Trello::Card.create(:name => name, :list_id => $add_cards_list.id)
+        card = trello_connect(m.user.nick) do |trello|
+          trello.create(:card, {'name' => name, 'idList' => $add_cards_list.id})
+        end
         m.reply "Created card #{card.name} with id: #{card.short_id}."
       end
     when /^card \d+ comment/
