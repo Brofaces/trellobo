@@ -226,8 +226,9 @@ bot = Cinch::Bot.new do
       elsif card_id.count > 1
         m.reply "There are #{list.count} cards with id: #{regex[1]}. Don't know what to do. Aborting"
       else
-        card = Trello::Card.find(card_id[0])
-        msg_err = nil
+        card = trello_connect(m.user.nick) do |trello|
+          trello.find(:cards, card_id[0])
+        end
         m.reply card.url
       end
     when /lists/
