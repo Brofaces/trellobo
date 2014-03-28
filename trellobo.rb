@@ -272,13 +272,14 @@ bot = Cinch::Bot.new do
       regex = /help with (\d+)/.match(m.message)
       card_id = given_short_id_return_long_id($help_board, regex[1].to_s)
       nick = m.user.nick.split('|')[0]
-      user = Trello::Member.find(get_login(nick))
-      m.reply "You must register your Trello username first! (eg: /msg #{ENV['TRELLO_BOT_NAME']} register <trello_username>)" unless user
-      card = Trello::Card.find(card_id[0])
-      m.reply "Helping with #{card.name}..."
-      card.add_member(user)
-      card.move_to_list($help_claimed_board)
-      m.reply "Added you to card #{card.name}."
+      card = trello_connect(m.user.nick) do |trello|
+        user = trello.find(:members, get_login(nick_parse(m.user.nick)))
+        card = trello.find(:cards, card_id[0])
+        m.reply "Helping with #{card.name}..."
+        card.add_member(user)
+        card.move_to_list($help_claimed_board)
+        m.reply "Added #{user.username} to card #{card.name}."
+      end
     when /^quit\s*\w*/
       code = /^quit\s*(\w*)/.match(m.message)[1]
       bot.quit if ENV['TRELLO_BOT_QUIT_CODE'].eql?(code)
