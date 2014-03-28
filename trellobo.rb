@@ -121,13 +121,13 @@ bot = Cinch::Bot.new do
         m.reply "Can't add card. It wasn't found any list named: #{ENV['TRELLO_ADD_CARDS_LIST']}."
       else
         m.reply "Creating card ... "
-        name = searchfor.strip.match(/^card add (.+)$/)[1]
+        name = m.message.strip.match(/^card add (.+)$/)[1]
         card = Trello::Card.create(:name => name, :list_id => $add_cards_list.id)
         m.reply "Created card #{card.name} with id: #{card.short_id}."
       end
     when /^card \d+ comment/
       m.reply "Commenting on card ... "
-      card_regex = searchfor.match(/^card (\d+) comment (.+)/)
+      card_regex = m.message.match(/^card (\d+) comment (.+)/)
       card_id = given_short_id_return_long_id($board, card_regex[1])
       if card_id.count == 0
         m.reply "Couldn't be found any card with id: #{card_regex[1]}. Aborting"
@@ -143,7 +143,7 @@ bot = Cinch::Bot.new do
       end
     when /^card \d+ move to .+/
       m.reply "Moving card ... "
-      regex = searchfor.match(/^card (\d+) move to (.+)/)
+      regex = m.message.match(/^card (\d+) move to (.+)/)
       list = get_list_by_name(regex[2].to_s)
       card_id = given_short_id_return_long_id($board, regex[1].to_s)
       if card_id.count == 0
@@ -168,7 +168,7 @@ bot = Cinch::Bot.new do
       end
     when /^card \d+ add member \w+/
       m.reply "Adding member to card ... "
-      regex = searchfor.match(/^card (\d+) add member (\w+)/)
+      regex = m.message.match(/^card (\d+) add member (\w+)/)
       card_id = given_short_id_return_long_id($board, regex[1].to_s)
       if card_id.count == 0
         m.reply "Couldn't be found any card with id: #{regex[1]}. Aborting"
@@ -192,7 +192,7 @@ bot = Cinch::Bot.new do
         end
       end
     when /^cards \w+/
-      username = searchfor.match(/^cards (\w+)/)[1]
+      username = m.message.match(/^cards (\w+)/)[1]
       cards = []
       cid_length = 1
       $board.cards.each do |card|
@@ -210,7 +210,7 @@ bot = Cinch::Bot.new do
         m.reply "  ->  #{c.short_id.to_s.rjust(cid_length)}. #{c.name} from list: #{c.list.name}"
       end
     when /^card \d+ link/
-      regex = searchfor.match(/^card (\d+) link/)
+      regex = m.message.match(/^card (\d+) link/)
       card_id = given_short_id_return_long_id($board, regex[1].to_s)
       if card_id.count == 0
         m.reply "Couldn't be found any card with id: #{regex[1]}. Aborting"
@@ -237,7 +237,7 @@ bot = Cinch::Bot.new do
         m.reply "Can't add card. It wasn't found any list named: #{ENV['TRELLO_ADD_CARDS_LIST']}."
       else
         m.reply "Requesting help ... "
-        regex = searchfor.strip.match(/^help me (.*)/)
+        regex = m.message.strip.match(/^help me (.*)/)
         name = regex[1]
         card = Trello::Card.create(:name => name, :list_id => $add_help_cards_list.id)
         m.reply "Created card #{card.name} with id: #{card.short_id}."
@@ -281,13 +281,13 @@ bot = Cinch::Bot.new do
       store_login(nick, login)
       m.reply "Done!"
     else
-      if searchfor.length > 0
+      if m.message.length > 0
         # trellobot presumes you know what you are doing and will attempt
         # to retrieve cards using the text you put in the message to him
         # at least the comparison is not case sensitive
-        list = $board.lists.detect { |l| l.name.casecmp(searchfor) == 0 }
+        list = $board.lists.detect { |l| l.name.casecmp(m.message) == 0 }
         if list.nil?
-          m.reply "There's no list called <#{searchfor}> on the board, #{m.user.nick}. Sorry."
+          m.reply "There's no list called <#{m.message}> on the board, #{m.user.nick}. Sorry."
         else
           cards = list.cards
           if cards.count == 0
