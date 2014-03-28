@@ -80,3 +80,19 @@ def lonely_cards(nick)
     doc['lonely_cards'] if doc
   end
 end
+
+# connect to trello and run the block or simply return a connection
+def trello_connect(nick, &block)
+  login = get_login(nick)
+  token = db_connect do |db|
+    doc = db[$login_collection].find_one({_id: nick_parse(nick)}, {fields: ['token']})
+    doc['token'] if doc
+  end
+
+  trello_client = Trello::Client.new(consumer_key: ENV['TRELLO_API_KEY'], consumer_secret: ENV['TRELLO_API_SECRET'], oauth_token: token)
+  if block
+    yield trello_client
+  else
+    trello_client
+  end
+end
