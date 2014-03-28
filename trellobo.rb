@@ -263,7 +263,7 @@ bot = Cinch::Bot.new do
       end
       cid_length = 1
       $add_help_cards_list.cards.each do |c|
-          cid_length = card.short_id.to_s.length if card.short_id.to_s.length > cid_length
+        cid_length = c.short_id.to_s.length if c.short_id.to_s.length > cid_length
       end
       $add_help_cards_list.cards.each do |c|
         m.reply "  ->  #{c.short_id.to_s.rjust(cid_length)}. #{c.name} from list: #{c.list.name}"
