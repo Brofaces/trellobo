@@ -112,7 +112,7 @@ bot = Cinch::Bot.new do
     sync_board unless $board and $help_board
     unless $board and $help_board
       m.reply "I can't seem to get the list of ideas from Trello, sorry. Try here: https://trello.com/board/#{ENV['TRELLO_BOARD_ID']} or here: https://trello.com/board/#{ENV['TRELLO_HELP_BOARD_ID']}"
-      bot.halt
+      next
     end
 
     case m.message
