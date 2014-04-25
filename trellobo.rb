@@ -21,6 +21,7 @@ require_relative './pester.rb'
 # TRELLO_API_ACCESS_TOKEN_KEY : your Trello API access token key. See above how to generate it.
 # TRELLO_BOARD_ID : the trellobot looks at only one board and the lists on it, put its id here
 # TRELLO_HELP_BOARD_ID : the id of the trello board for help requests
+# TRELLO_RELEASE_BOARD_ID : the id of the trello board for releases
 # TRELLO_BOT_QUIT_CODE : passcode to cause trellobot to quit - defaults to none
 # TRELLO_BOT_CHANNEL : the name of the channel you want trellobot to live on
 # TRELLO_BOT_CHANNEL_KEY : the password of the channel you want trellobot to live on. Optional
@@ -30,11 +31,14 @@ require_relative './pester.rb'
 # TRELLO_BOT_SERVER_SSL_PORT : if ssl is used set this variable to the port number that should be used. Optional
 # TRELLO_ADD_CARDS_LIST : all cards are added at creation time to a default list. Set this variable to the name of this list, otherwise it will default to To Do. Optional
 # TRELLO_ADD_HELP_CARDS_LIST : the id of the trello list for help requests
+# TRELLO_ADD_RELEASE_LIST : all release cards are added at creation time to a default list. Set this variable to the name of this list, otherwise it will default to To Do. Optional
 # TRELLO_HELP_CLAIMED_LIST : the id of the trello list for claimed help requests
 
 $board = nil
 $add_cards_list = nil
 $add_help_cards_list = nil
+$release_board = nil
+$add_release_list = nil
 
 include Trello
 include Trello::Authorization
@@ -60,6 +64,8 @@ def sync_board
   $add_cards_list = $board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_CARDS_LIST']) == 0 }
   $add_help_cards_list = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_HELP_CARDS_LIST']) == 0 }
   $help_claimed_board = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_HELP_CLAIMED_LIST']) == 0 }
+  $release_board = Trello::Board.find(ENV['TRELLO_RELEASE_BOARD_ID'])
+  $add_release_list = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_RELEASE_LIST']) == 0 }
 end
 
 def say_help(msg)
@@ -78,8 +84,12 @@ def say_help(msg)
   msg.reply "  -> 10. help me TASK1337 - creates a new card named: \'help with TASK1337\' on the help board"
   msg.reply "  -> 11. help requests - show unclaimed help requests"
   msg.reply "  -> 12. help with <id> - add yourself as a member on a help request card with id equal to <id>"
-  msg.reply "  -> 13. register - create an OAuth key and secret for use with #{ENV['TRELLO_BOT_NAME']}"
-  msg.reply "  -> 14. confirm <login> <token> - finish registering with #{ENV['TRELLO_BOT_NAME']}"
+  msg.reply "  -> 13. releases joe - list release cards assigned to joe"
+  msg.reply "  -> 14. release add CHG1337 - create card \'CHG1337\' to the release board"
+  msg.reply "  -> 14. release <id> add member joe - add joe to the release with id equal to <id>"
+  msg.reply "  -> 15. release <id> to QA - move card with id equal to <id> to list QA"
+  msg.reply "  -> 16. register - create an OAuth key and secret for use with #{ENV['TRELLO_BOT_NAME']}"
+  msg.reply "  -> 17. confirm <login> <token> - finish registering with #{ENV['TRELLO_BOT_NAME']}"
 end
 
 bot = Cinch::Bot.new do
@@ -303,6 +313,101 @@ bot = Cinch::Bot.new do
         card.add_member(user)
         card.move_to_list($help_claimed_board)
         m.reply "Added #{user.username} to card #{card.name}."
+      end
+    when /^releases \w+/
+      username = m.message.match(/^releases (\w+)/)[1]
+      cards = []
+      cid_length = 1
+      $release_board.cards.each do |card|
+        members = card.members.collect { |mem| mem.username }
+        if members.include? username
+          cards << card
+          cid_length = card.short_id.to_s.length if card.short_id.to_s.length > cid_length
+        end
+      end
+      if cards.count == 0
+        m.reply "User \"#{username}\" has no releases assigned."
+      end
+      cards.sort! { |c1, c2| c1.short_id.to_i <=> c2.short_id.to_i }
+      cards.each do |c|
+        m.reply "  ->  #{c.short_id.to_s.rjust(cid_length)}. #{c.name} from list: #{c.list.name}"
+      end
+    when /^release add .*/
+      unless registered_nicks.include?(nick_parse(m.user.nick))
+        m.reply "please register first!"
+        next
+      end
+      if $add_release_list.nil?
+        m.reply "Can't add release. It wasn't found any list named: #{ENV['TRELLO_ADD_RELEASE_LIST']}."
+      else
+        m.reply "Creating card ... "
+        name = m.message.strip.match(/^release add (.+)$/)[1]
+        card = trello_connect(m.user.nick) do |trello|
+          trello.create(:card, {'name' => name, 'idList' => $add_release_list.id})
+        end
+        m.reply "Created card #{card.name} with id: #{card.short_id}."
+      end
+    when /^release \d+ add member \w+/
+      unless registered_nicks.include?(nick_parse(m.user.nick))
+        m.reply "please register first!"
+        next
+      end
+      m.reply "Adding member to card ... "
+      regex = m.message.match(/^release (\d+) add member (\w+)/)
+      card_id = given_short_id_return_long_id($release_board, regex[1].to_s)
+      if card_id.count == 0
+        m.reply "Couldn't be found any card with id: #{regex[1]}. Aborting"
+      elsif card_id.count > 1
+        m.reply "There are #{list.count} cards with id: #{regex[1]}. Don't know what to do. Aborting"
+      else
+        trello_connect(m.user.nick) do |trello|
+          card = trello.find(:cards, card_id[0])
+          membs = card.members.collect {|m| m.username}
+          begin
+            member = trello.find(:members, regex[2])
+          rescue
+            member = nil
+          end
+          if member.nil?
+            m.reply "User \"#{regex[2]}\" doesn't exist in Trello."
+          elsif membs.include? regex[2]
+            m.reply "#{member.full_name} is already assigned to card \"#{card.name}\"."
+          else
+            card.add_member(member)
+            m.reply "Added \"#{member.full_name}\" to card \"#{card.name}\"."
+          end
+        end
+      end
+    when /^release .+ to .+/
+      unless registered_nicks.include?(nick_parse(m.user.nick))
+        m.reply "please register first!"
+        next
+      end
+      m.reply "Moving card ... "
+      regex = m.message.match(/^release (.+) to (.+)/)
+      list = get_list_by_name(regex[2].to_s)
+      card_id = given_short_id_return_long_id($release_board, regex[1].to_s)
+      if card_id.count == 0
+        m.reply "Couldn't be found any card with id: #{regex[1]}. Aborting"
+      elsif card_id.count > 1
+        m.reply "There are #{list.count} cards with id: #{regex[1]}. Don't know what to do. Aborting"
+      else
+        if list.count == 0
+          m.reply "Couldn't be found any list named: \"#{regex[2].to_s}\". Aborting"
+        elsif list.count > 1
+          m.reply "There are #{list.count} lists named: #{regex[2].to_s}. Don't know what to do. Aborting"
+        else
+          list = list[0]
+          trello_connect(m.user.nick) do |trello|
+            card = trello.find(:cards, card_id[0].to_s)
+            if card.list.name.casecmp(list.name) == 0
+              m.reply "Card \"#{card.name}\" is already on list \"#{list.name}\"."
+            else
+              card.move_to_list list
+              m.reply "Moved card \"#{card.name}\" to list \"#{list.name}\"."
+            end
+          end
+        end
       end
     when /^quit\s*\w*/
       code = /^quit\s*(\w*)/.match(m.message)[1]
