@@ -53,8 +53,8 @@ def given_short_id_return_long_id(board, short_id)
   long_ids.delete_if {|e| e.nil?}
 end
 
-def get_list_by_name(name)
-  $board.lists.find_all {|l| l.name.casecmp(name.to_s) == 0}
+def get_list_by_name(board, name)
+  board.lists.find_all {|l| l.name.casecmp(name.to_s) == 0}
 end
 
 def sync_board
@@ -171,7 +171,7 @@ bot = Cinch::Bot.new do
       end
       m.reply "Moving card ... "
       regex = m.message.match(/^card (\d+) move to (.+)/)
-      list = get_list_by_name(regex[2].to_s)
+      list = get_list_by_name($board, regex[2].to_s)
       card_id = given_short_id_return_long_id($board, regex[1].to_s)
       if card_id.count == 0
         m.reply "Couldn't be found any card with id: #{regex[1]}. Aborting"
@@ -385,7 +385,7 @@ bot = Cinch::Bot.new do
       end
       m.reply "Moving card ... "
       regex = m.message.match(/^release (.+) to (.+)/)
-      list = get_list_by_name(regex[2].to_s)
+      list = get_list_by_name($release_board, regex[2].to_s)
       card_id = given_short_id_return_long_id($release_board, regex[1].to_s)
       if card_id.count == 0
         m.reply "Couldn't be found any card with id: #{regex[1]}. Aborting"
