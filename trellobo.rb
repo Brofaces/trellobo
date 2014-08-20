@@ -228,17 +228,27 @@ bot = Cinch::Bot.new do
       end
     when /^cards \w+/
       username = m.message.match(/^cards (\w+)/)[1]
-      cards = []
       cid_length = 1
-      $board.cards.each do |card|
-        members = card.members.collect { |mem| mem.username }
-        if members.include? username
-          cards << card
-          cid_length = card.short_id.to_s.length if card.short_id.to_s.length > cid_length
-        end
+      # make sure everything is ok before doing anything
+      begin
+        trello_user = trello_connect(m.user.nick) { |trello| trello.find(:member, username) }
+      rescue Trello::Error => e
+        m.reply "User '#{username}' doesn't exist :("
+        break
       end
+      unless registered_nicks.include?(username)
+        m.reply "User '#{username}' isn't registered with me :("
+        break
+      end
+      # grab the relevent cards for the user
+      cards = trello_user.cards.collect do |c|
+        cid_length = c.short_id.to_s.length if c.short_id.to_s.length > cid_length
+        c if c.board == $board
+      end
+      cards.delete_if{ |c| c.nil? }
       if cards.count == 0
         m.reply "User \"#{username}\" has no cards assigned."
+        break
       end
       cards.sort! { |c1, c2| c1.short_id.to_i <=> c2.short_id.to_i }
       cards.each do |c|
