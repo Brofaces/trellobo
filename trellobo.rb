@@ -65,7 +65,7 @@ def sync_board
   $add_help_cards_list = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_HELP_CARDS_LIST']) == 0 }
   $help_claimed_board = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_HELP_CLAIMED_LIST']) == 0 }
   $release_board = Trello::Board.find(ENV['TRELLO_RELEASE_BOARD_ID'])
-  $add_release_list = $help_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_RELEASE_LIST']) == 0 }
+  $add_release_list = $release_board.lists.detect { |l| l.name.casecmp(ENV['TRELLO_ADD_RELEASE_LIST']) == 0 }
 end
 
 def say_help(msg)
