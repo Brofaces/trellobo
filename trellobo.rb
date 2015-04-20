@@ -134,7 +134,7 @@ bot = Cinch::Bot.new do
         next
       end
       if $add_cards_list.nil?
-        m.reply "Can't add card. It wasn't found any list named: #{ENV['TRELLO_ADD_CARDS_LIST']}."
+        m.reply "Can't add card. Couldn't find a list named #{ENV['TRELLO_ADD_CARDS_LIST']}."
       else
         m.reply "Creating card ... "
         name = m.message.strip.match(/^card add (.+)$/)[1]
