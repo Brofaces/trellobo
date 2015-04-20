@@ -2,6 +2,7 @@ require 'cinch'
 require 'trello'
 require 'json'
 require 'resolv'
+require 'time'
 require_relative './utils'
 require_relative './pester.rb'
 
@@ -75,7 +76,7 @@ def say_help(msg)
   msg.reply "  ->  1. help - shows this!"
   msg.reply "  ->  2. sync - resyncs my cache with the board."
   msg.reply "  ->  3. lists - show me all the board list names"
-  msg.reply "  ->  4. card add this is a card - creates a new card named: \'this is a card\' in a list defined in the TRELLO_ADD_CARDS_LIST env variable or if it\'s not present in a list named To Do"
+  msg.reply "  ->  4. card add this is a card (due in X [days|weeks]) - creates a new card named: \'this is a card\' in a list defined in the TRELLO_ADD_CARDS_LIST env variable. defaults to two weeks due date"
   msg.reply "  ->  5. card <id> comment this is a comment on card <id> - creates a comment on the card with short id equal to <id>"
   msg.reply "  ->  6. card <id> move to Doing - moves the card with short id equal to <id> to the list Doing"
   msg.reply "  ->  7. card <id> add member joe - assign joe to the card with short id equal to <id>."
@@ -137,9 +138,29 @@ bot = Cinch::Bot.new do
         m.reply "Can't add card. Couldn't find a list named #{ENV['TRELLO_ADD_CARDS_LIST']}."
       else
         m.reply "Creating card ... "
-        name = m.message.strip.match(/^card add (.+)$/)[1]
+        parts = m.message.strip.match(/^card add (.+)$/)[1].split(' due in ')
+        name = parts[0]
+        due = begin
+          m = /.* (day|week)/.match(parts[1])
+          tu = if m
+            case m[1]
+            when 'day'
+              1
+            when 'week'
+              7
+            end
+          else
+            # default to week multiplication instead of days
+            tu = 7
+          end
+          puts "tu = #{tu}"
+          parts[1] ? DateTime.now + (parts[1].to_i * tu) : DateTime.now + tu
+        end
         card = trello_connect(m.user.nick) do |trello|
-          trello.create(:card, {'name' => name, 'idList' => $add_cards_list.id})
+          c = trello.create(:card, {'name' => name, 'idList' => $add_cards_list.id})
+          c.due = due
+          c.save
+          c
         end
         m.reply "Created card #{card.name} with id: #{card.short_id}."
       end
