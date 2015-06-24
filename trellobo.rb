@@ -141,9 +141,9 @@ bot = Cinch::Bot.new do
         parts = m.message.strip.match(/^card add (.+)$/)[1].split(' due in ')
         name = parts[0]
         due = begin
-          m = /.* (day|week)/.match(parts[1])
-          tu = if m
-            case m[1]
+          s = /.* (day|week)/.match(parts[1])
+          tu = if s
+            case s[1]
             when 'day'
               1
             when 'week'
