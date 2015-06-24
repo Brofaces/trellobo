@@ -153,7 +153,6 @@ bot = Cinch::Bot.new do
             # default to week multiplication instead of days
             tu = 7
           end
-          puts "tu = #{tu}"
           parts[1] ? DateTime.now + (parts[1].to_i * tu) : DateTime.now + tu
         end
         card = trello_connect(m.user.nick) do |trello|
